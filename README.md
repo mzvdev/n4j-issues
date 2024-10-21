@@ -68,6 +68,5 @@ Now if you remove following @authorization in schema.graphql:
 ```
 
 Tests will now pass...
-(you can force save index.test.js to force rerun of tests)
 
 # n4j-issues
