@@ -1,0 +1,81 @@
+type JWT @jwt {
+  roles: [String!]!
+  id: String
+  sub: Int
+}
+type User
+  @authorization(
+    validate: [
+      { where: { node: { id: "$jwt.sub" } } }
+      { where: { jwt: { roles_INCLUDES: "admin" } } }
+    ]
+  ) {
+  id: String! @unique
+  userId: String! @unique
+  adminAccess: [Tenant!]! @relationship(type: "ADMIN_IN", direction: OUT)
+  createdAt: DateTime! @timestamp(operations: [CREATE])
+  updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+  updatedBy: String
+    @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
+}
+
+type Tenant
+  @authorization(
+    validate: [
+      { where: { node: { id: "$jwt.sub" } } }
+      { where: { jwt: { roles_INCLUDES: "admin" } } }
+    ]
+  ) {
+  id: ID! @id
+  admins: [User!]! @relationship(type: "ADMIN_IN", direction: IN)
+  garages: [Garage!]! @relationship(type: "TENANT_HAS_GARAGE", direction: IN)
+  vehiclecards: [VehicleCard!]!
+    @relationship(type: "VEHICLECARD_OWNER", direction: IN)
+  createdAt: DateTime! @timestamp(operations: [CREATE])
+  updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+  updatedBy: String
+    @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
+}
+
+type Garage
+  @authentication(
+    operations: [
+      UPDATE
+      DELETE
+      CREATE
+      CREATE_RELATIONSHIP
+      DELETE_RELATIONSHIP
+      SUBSCRIBE
+    ]
+    jwt: { roles_INCLUDES: "overlord" }
+  ) {
+  id: ID! @id
+  tenant: Tenant! @relationship(type: "TENANT_HAS_GARAGE", direction: OUT)
+  createdAt: DateTime! @timestamp(operations: [CREATE])
+  updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+  updatedBy: String
+    @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
+}
+
+type VehicleCard
+  @authentication(
+    operations: [
+      UPDATE
+      DELETE
+      CREATE
+      CREATE_RELATIONSHIP
+      DELETE_RELATIONSHIP
+      SUBSCRIBE
+    ]
+    jwt: { roles_INCLUDES: "overlord" }
+  ) {
+  id: ID! @id
+  tenant: Tenant! @relationship(type: "VEHICLECARD_OWNER", direction: OUT) # <---  this line
+  garages: [Garage!]! @relationship(type: "VALID_GARAGES", direction: OUT)
+  createdAt: DateTime! @timestamp(operations: [CREATE])
+  updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+  updatedBy: String
+    @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
+}
+
+extend schema @authentication @query(read: true, aggregate: false)
