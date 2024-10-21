@@ -6,11 +6,21 @@ type JWT @jwt {
 type User
   @authorization(
     validate: [
-      { where: { node: { id: "$jwt.sub" } } }
+      { where: { node: { userId: "$jwt.sub" } } }
       { where: { jwt: { roles_INCLUDES: "admin" } } }
     ]
+  )
+  @authentication(
+    operations: [
+      UPDATE
+      DELETE
+      CREATE
+      CREATE_RELATIONSHIP
+      DELETE_RELATIONSHIP
+      SUBSCRIBE
+    ]
+    jwt: { roles_INCLUDES: "overlord" }
   ) {
-  id: String! @unique
   userId: String! @unique
   adminAccess: [Tenant!]! @relationship(type: "ADMIN_IN", direction: OUT)
   createdAt: DateTime! @timestamp(operations: [CREATE])
@@ -20,11 +30,16 @@ type User
 }
 
 type Tenant
-  @authorization(
-    validate: [
-      { where: { node: { id: "$jwt.sub" } } }
-      { where: { jwt: { roles_INCLUDES: "admin" } } }
+  @authentication(
+    operations: [
+      UPDATE
+      DELETE
+      CREATE
+      CREATE_RELATIONSHIP
+      DELETE_RELATIONSHIP
+      SUBSCRIBE
     ]
+    jwt: { roles_INCLUDES: "overlord" }
   ) {
   id: ID! @id
   admins: [User!]! @relationship(type: "ADMIN_IN", direction: IN)
