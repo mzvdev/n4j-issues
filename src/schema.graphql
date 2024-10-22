@@ -15,10 +15,11 @@ type User
     ]
     jwt: { roles_INCLUDES: "overlord" }
   ) {
+  userId: String! @unique
+
   firstName: String!
   lastName: String!
   fullName: String! @customResolver(requires: "firstName lastName")
-  userId: String! @unique
   adminAccess: [Tenant!]! @relationship(type: "ADMIN_IN", direction: OUT)
   createdAt: DateTime! @timestamp(operations: [CREATE])
   updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
@@ -38,6 +39,7 @@ type Tenant
     ]
     jwt: { roles_INCLUDES: "overlord" }
   ) {
+  ref: String!
   id: ID! @id
   admins: [User!]! @relationship(type: "ADMIN_IN", direction: IN)
   garages: [Garage!]! @relationship(type: "TENANT_HAS_GARAGE", direction: IN)

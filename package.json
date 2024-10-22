@@ -4,7 +4,7 @@
     "main": "index.js",
     "license": "MIT",
     "devDependencies": {
-        "@apollo/client": "^3.11.8",
+        "@apollo/client": "^3.8.4",
         "vitest": "^0.34.5"
     },
     "scripts": {
@@ -12,9 +12,9 @@
         "watch-test": "vitest watch"
     },
     "dependencies": {
-        "@apollo/server": "^4.11.0",
+        "@apollo/server": "^4.4.0",
         "@neo4j/graphql": "^5.9.0",
-        "graphql": "^16.9.0",
-        "neo4j-driver": "^5.26.0"
+        "graphql": "^16.6.0",
+        "neo4j-driver": "^5.5.0"
     }
 }
