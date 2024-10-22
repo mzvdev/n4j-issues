@@ -1,13 +1,51 @@
 type JWT @jwt {
   roles: [String!]!
   id: String
-  sub: Int
+  sub: String
 }
+
+enum WeekDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
 type User
+  @authorization(filter: [{ where: { node: { kratosId: "$jwt.id" } } }])
+  @authentication(
+    operations: [
+      UPDATE
+      DELETE
+      CREATE
+      CREATE_RELATIONSHIP
+      DELETE_RELATIONSHIP
+      SUBSCRIBE
+    ]
+    jwt: { roles_INCLUDES: "overlord" }
+  ) {
+  kratosId: String! @unique
+  ref: String! @customResolver
+  firstName: String!
+  lastName: String!
+  fullName: String! @customResolver(requires: "firstName lastName")
+  userId: String! @unique
+  adminAccess: [Tenant!]! @relationship(type: "ADMIN_IN", direction: OUT)
+  createdAt: DateTime! @timestamp(operations: [CREATE])
+  updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+  updatedBy: String
+    @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
+}
+
+type Tenant
   @authorization(
     validate: [
-      { where: { node: { userId: "$jwt.sub" } } }
-      { where: { jwt: { roles_INCLUDES: "admin" } } }
+      { where: { node: { admins: { kratosId: "$jwt.id" } } } }
+      { where: { node: { ref: "$jwt.sub" } }, operations: [READ] }
+      { where: { jwt: { roles_INCLUDES: "overlord" } } }
     ]
   )
   @authentication(
@@ -21,31 +59,103 @@ type User
     ]
     jwt: { roles_INCLUDES: "overlord" }
   ) {
-  userId: String! @unique
-  adminAccess: [Tenant!]! @relationship(type: "ADMIN_IN", direction: OUT)
+  id: ID! @id
+  """
+  Milliseconds after midnight when this cinema opens
+  """
+  settings: Settings!
+    @relationship(type: "HAS_SETTINGS", direction: OUT, aggregate: false)
+
+  ref: String!
+  admins: [User!]! @relationship(type: "ADMIN_IN", direction: IN)
+  garages: [Garage!]! @relationship(type: "TENANT_HAS_GARAGE", direction: IN)
+  vehiclecards: [VehicleCard!]!
+    @relationship(type: "VEHICLECARD_OWNER", direction: IN)
   createdAt: DateTime! @timestamp(operations: [CREATE])
   updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
   updatedBy: String
     @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
 }
 
-type Tenant
-  @authentication(
-    operations: [
-      UPDATE
-      DELETE
-      CREATE
-      CREATE_RELATIONSHIP
-      DELETE_RELATIONSHIP
-      SUBSCRIBE
+type Settings
+  @authorization(
+    validate: [
+      { where: { node: { tenant: { admins: { kratosId: "$jwt.id" } } } } }
+      { where: { node: { tenant: { ref: "$jwt.sub" } } }, operations: [READ] }
+      { where: { jwt: { roles_INCLUDES: "overlord" } } }
     ]
-    jwt: { roles_INCLUDES: "overlord" }
   ) {
-  id: ID! @id
-  admins: [User!]! @relationship(type: "ADMIN_IN", direction: IN)
-  garages: [Garage!]! @relationship(type: "TENANT_HAS_GARAGE", direction: IN)
-  vehiclecards: [VehicleCard!]!
-    @relationship(type: "VEHICLECARD_OWNER", direction: IN)
+  tenant: Tenant!
+    @relationship(type: "HAS_SETTINGS", direction: IN, aggregate: false)
+  timezone: String!
+  extendedOpeningHours: [OpeningDay!]!
+    @relationship(type: "HAS_OPENING_HOURS", direction: OUT, aggregate: false)
+
+  createdAt: DateTime! @timestamp(operations: [CREATE])
+  updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+  updatedBy: String
+    @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
+}
+
+type OpeningDay
+  @authorization(
+    validate: [
+      {
+        where: {
+          node: { settings: { tenant: { admins: { kratosId: "$jwt.id" } } } }
+        }
+      }
+      {
+        where: { node: { settings: { tenant: { ref: "$jwt.sub" } } } }
+        operations: [READ]
+      }
+      { where: { jwt: { roles_INCLUDES: "overlord" } } }
+    ]
+  ) {
+  settings: Settings!
+    @relationship(type: "HAS_OPENING_HOURS", direction: IN, aggregate: false)
+  weekday: WeekDay # default (all week) if null
+  date: Date # ignroe weekday if not null
+  # Empty list means closed this day
+  open: [OpeningHoursInterval!]!
+    @relationship(type: "HAS_OPEN_INTERVALS", direction: OUT, aggregate: false)
+  createdAt: DateTime! @timestamp(operations: [CREATE])
+  updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
+  updatedBy: String
+    @populatedBy(callback: "getUserIDFromContext", operations: [CREATE, UPDATE])
+}
+
+type OpeningHoursInterval
+  @authorization(
+    validate: [
+      {
+        where: {
+          node: {
+            openingDay: {
+              settings: { tenant: { admins: { kratosId: "$jwt.id" } } }
+            }
+          }
+        }
+      }
+      {
+        where: {
+          node: { openingDay: { settings: { tenant: { ref: "$jwt.sub" } } } }
+        }
+        operations: [READ]
+      }
+      { where: { jwt: { roles_INCLUDES: "overlord" } } }
+    ]
+  ) {
+  openingDay: OpeningDay
+    @relationship(type: "HAS_OPEN_INTERVALS", direction: IN, aggregate: false)
+  """
+  Milliseconds after midnight when this cinema opens
+  """
+  from: Int!
+  """
+  Milliseconds after midnight when this cinema closes
+  """
+  to: Int!
   createdAt: DateTime! @timestamp(operations: [CREATE])
   updatedAt: DateTime! @timestamp(operations: [CREATE, UPDATE])
   updatedBy: String
