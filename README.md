@@ -59,12 +59,13 @@ Test should now fail with:
 Now if you remove following @authorization in schema.graphql:
 
 ```
-  @authorization(
-    validate: [
-      { where: { node: { userId: "$jwt.sub" } } }
-      { where: { jwt: { roles_INCLUDES: "admin" } } }
-    ]
-  )
+  fullName: String! @customResolver(requires: "firstName lastName")
+```
+
+And if you remove resolvers in index.test.js
+
+```
+  resolvers: resolvers,
 ```
 
 Tests will now pass...
