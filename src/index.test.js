@@ -10,19 +10,7 @@ const driver = neo4j.driver(
     neo4j.auth.basic(
         process.env.NEO4J_DATABASE_USERNAME,
         process.env.NEO4J_DATABASE_PASSWORD
-    ),
-    {
-        // The logging block code 
-        logging: {
-            // setting the logging level to debug, possible options 'debug', 'info', 'warn', 'error'
-            level: 'debug',
-            // the logger function. It will receive log level and the message to be logged.
-            logger: (level, message) => {
-                const currentTime = new Date().toISOString();
-                console[level].call(console, `${currentTime} ${level.toUpperCase()} ${message}`)
-            }
-        }
-    }
+    )
 );
 const laterResolvedValues = (type) => {
     const values = {};
@@ -69,7 +57,7 @@ describe('testing graphql', async () => {
             'utf8'
         ).toString(),
         driver,
-        resolvers: resolvers
+        resolvers: resolvers,
     });
     const apolloServer = new ApolloServer({
         schema: await neo4jGraphql.getSchema(),
